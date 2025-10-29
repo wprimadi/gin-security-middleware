@@ -1,5 +1,7 @@
 # 🔒 Gin Security Middleware
 
+![Gin Security Middleware](https://raw.githubusercontent.com/wprimadi/gin-security-middleware/refs/heads/main/banner.png)
+
 Advanced security middleware for [Gin](https://github.com/gin-gonic/gin) web framework that provides comprehensive protection against common web vulnerabilities including SQL Injection, XSS, Path Traversal, Command Injection, and more. Now with **full coverage** for all input vectors including JSON bodies, HTTP headers, and cookies.
 
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.16-blue)](https://golang.org/dl/)
