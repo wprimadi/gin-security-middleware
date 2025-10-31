@@ -30,6 +30,16 @@ type SecurityConfig struct {
 	ValidateJSONBody  bool     // Validate JSON body
 	HeadersToValidate []string // Specific headers to validate
 	SkipUserAgent     bool     // Skip User-Agent validation
+
+	// Security headers options
+	EnableSecurityHeaders bool   // Enable automatic security headers
+	CSPPolicy             string // Content-Security-Policy
+	FrameOptions          string // X-Frame-Options (DENY, SAMEORIGIN)
+	ContentTypeNosniff    bool   // X-Content-Type-Options: nosniff
+	XSSProtection         string // X-XSS-Protection
+	StrictTransportSec    string // Strict-Transport-Security (HSTS)
+	ReferrerPolicy        string // Referrer-Policy
+	PermissionsPolicy     string // Permissions-Policy
 }
 
 // DefaultSecurityConfig returns default configuration
@@ -49,6 +59,16 @@ func DefaultSecurityConfig() SecurityConfig {
 		ValidateJSONBody:  true,
 		HeadersToValidate: []string{"X-Forwarded-For", "X-Real-IP", "X-User-Id", "X-API-Key"},
 		SkipUserAgent:     true, // User-Agent often has special chars
+
+		// Security headers defaults
+		EnableSecurityHeaders: true,
+		CSPPolicy:             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none';",
+		FrameOptions:          "DENY",
+		ContentTypeNosniff:    true,
+		XSSProtection:         "1; mode=block",
+		StrictTransportSec:    "max-age=31536000; includeSubDomains",
+		ReferrerPolicy:        "strict-origin-when-cross-origin",
+		PermissionsPolicy:     "geolocation=(), microphone=(), camera=()",
 	}
 }
 
@@ -57,6 +77,11 @@ func EnhancedSecurityMiddleware(config SecurityConfig) gin.HandlerFunc {
 	validator := NewSecurityValidator(config)
 
 	return func(c *gin.Context) {
+		// Apply security headers first
+		if config.EnableSecurityHeaders {
+			applySecurityHeaders(c, config)
+		}
+
 		// 1. Validate Query Parameters
 		for key, values := range c.Request.URL.Query() {
 			for _, value := range values {
@@ -421,6 +446,48 @@ func (v *SecurityValidator) SanitizeString(input string) string {
 	return sanitized
 }
 
+// applySecurityHeaders sets security headers on response
+func applySecurityHeaders(c *gin.Context, config SecurityConfig) {
+	// Content Security Policy
+	if config.CSPPolicy != "" {
+		c.Header("Content-Security-Policy", config.CSPPolicy)
+	}
+
+	// X-Frame-Options
+	if config.FrameOptions != "" {
+		c.Header("X-Frame-Options", config.FrameOptions)
+	}
+
+	// X-Content-Type-Options
+	if config.ContentTypeNosniff {
+		c.Header("X-Content-Type-Options", "nosniff")
+	}
+
+	// X-XSS-Protection
+	if config.XSSProtection != "" {
+		c.Header("X-XSS-Protection", config.XSSProtection)
+	}
+
+	// Strict-Transport-Security (HSTS)
+	if config.StrictTransportSec != "" {
+		c.Header("Strict-Transport-Security", config.StrictTransportSec)
+	}
+
+	// Referrer-Policy
+	if config.ReferrerPolicy != "" {
+		c.Header("Referrer-Policy", config.ReferrerPolicy)
+	}
+
+	// Permissions-Policy
+	if config.PermissionsPolicy != "" {
+		c.Header("Permissions-Policy", config.PermissionsPolicy)
+	}
+
+	// Additional security headers
+	c.Header("X-Permitted-Cross-Domain-Policies", "none")
+	c.Header("X-Download-Options", "noopen")
+}
+
 // SecurityError custom error for security issues
 type SecurityError struct {
 	Type  string
@@ -441,10 +508,15 @@ func (e *SecurityError) Error() string {
 //     config := DefaultSecurityConfig()
 //     config.HeadersToValidate = []string{"X-User-Id", "X-API-Key", "X-Forwarded-For"}
 //
+//     // Customize security headers
+//     config.CSPPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline'"
+//     config.FrameOptions = "SAMEORIGIN"
+//
 //     r.Use(EnhancedSecurityMiddleware(config))
 //
 //     r.POST("/api/users", func(c *gin.Context) {
 //         // All inputs (query, form, JSON, headers, cookies) are validated
+//         // Security headers are automatically set on response
 //         var user User
 //         c.ShouldBindJSON(&user)
 //         c.JSON(200, gin.H{"message": "User created safely"})
@@ -452,3 +524,30 @@ func (e *SecurityError) Error() string {
 //
 //     r.Run(":8080")
 // }
+
+// SecureHeadersMiddleware - Standalone middleware for security headers only
+func SecureHeadersMiddleware(config SecurityConfig) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		applySecurityHeaders(c, config)
+		c.Next()
+	}
+}
+
+// StrictSecurityConfig returns a strict security configuration
+func StrictSecurityConfig() SecurityConfig {
+	config := DefaultSecurityConfig()
+
+	// Stricter CSP
+	config.CSPPolicy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+
+	// Stricter HSTS
+	config.StrictTransportSec = "max-age=63072000; includeSubDomains; preload"
+
+	// Stricter Referrer Policy
+	config.ReferrerPolicy = "no-referrer"
+
+	// Stricter Permissions Policy
+	config.PermissionsPolicy = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+
+	return config
+}
