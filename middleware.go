@@ -499,32 +499,6 @@ func (e *SecurityError) Error() string {
 	return "Security violation detected: " + e.Type + " in field: " + e.Field
 }
 
-// Example usage:
-//
-// func main() {
-//     r := gin.Default()
-//
-//     // Use enhanced middleware with full coverage
-//     config := DefaultSecurityConfig()
-//     config.HeadersToValidate = []string{"X-User-Id", "X-API-Key", "X-Forwarded-For"}
-//
-//     // Customize security headers
-//     config.CSPPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline'"
-//     config.FrameOptions = "SAMEORIGIN"
-//
-//     r.Use(EnhancedSecurityMiddleware(config))
-//
-//     r.POST("/api/users", func(c *gin.Context) {
-//         // All inputs (query, form, JSON, headers, cookies) are validated
-//         // Security headers are automatically set on response
-//         var user User
-//         c.ShouldBindJSON(&user)
-//         c.JSON(200, gin.H{"message": "User created safely"})
-//     })
-//
-//     r.Run(":8080")
-// }
-
 // SecureHeadersMiddleware - Standalone middleware for security headers only
 func SecureHeadersMiddleware(config SecurityConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -551,3 +525,29 @@ func StrictSecurityConfig() SecurityConfig {
 
 	return config
 }
+
+// Example usage:
+//
+// func main() {
+//     r := gin.Default()
+//
+//     // Use enhanced middleware with full coverage
+//     config := DefaultSecurityConfig()
+//     config.HeadersToValidate = []string{"X-User-Id", "X-API-Key", "X-Forwarded-For"}
+//
+//     // Customize security headers
+//     config.CSPPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline'"
+//     config.FrameOptions = "SAMEORIGIN"
+//
+//     r.Use(EnhancedSecurityMiddleware(config))
+//
+//     r.POST("/api/users", func(c *gin.Context) {
+//         // All inputs (query, form, JSON, headers, cookies) are validated
+//         // Security headers are automatically set on response
+//         var user User
+//         c.ShouldBindJSON(&user)
+//         c.JSON(200, gin.H{"message": "User created safely"})
+//     })
+//
+//     r.Run(":8080")
+// }
